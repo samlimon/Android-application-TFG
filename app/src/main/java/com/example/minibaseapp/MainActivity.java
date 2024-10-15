@@ -108,7 +108,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    
     // Método para convertir bytes a hex para mostrar
     private String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
