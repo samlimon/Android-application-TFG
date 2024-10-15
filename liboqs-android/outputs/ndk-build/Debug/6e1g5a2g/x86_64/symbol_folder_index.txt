@@ -1,0 +1,1 @@
+C:\Users\Sergio\AndroidStudioProjects\MiniBaseApp\liboqs-android\build\intermediates\cxx\Debug\6e1g5a2g\obj\local\x86_64
