@@ -53,10 +53,10 @@ JNIEXPORT void JNICALL Java_com_example_liboqs_Rand_randombytes_1nist_1kat_1init
     jbyte *entropy_input_native = (*env)->GetByteArrayElements(env, jentropy_input, 0);
 
     if (pers_str_len == 0) {
-        OQS_randombytes_nist_kat_init_256bit((uint8_t*) entropy_input_native, NULL);
+        OQS_randombytes((uint8_t*) entropy_input_native, (size_t) pers_str_len);
     } else {
         jbyte *pers_str_native = (*env)->GetByteArrayElements(env, jpers_str, 0);
-        OQS_randombytes_nist_kat_init_256bit((uint8_t*) entropy_input_native, (uint8_t*) pers_str_native);
+        OQS_randombytes((uint8_t*) entropy_input_native, (size_t) pers_str_len);
         (*env)->ReleaseByteArrayElements(env, jpers_str, pers_str_native, JNI_ABORT);
     }
 

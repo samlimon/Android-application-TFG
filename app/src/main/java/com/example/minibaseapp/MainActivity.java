@@ -24,7 +24,7 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String ALGORITHM_NAME = "DILITHIUM_2"; // Cambia a tu algoritmo deseado
+    private static final String ALGORITHM_NAME = "Dilithium2"; // Cambia a tu algoritmo deseado
     private Uri selectedFileUri;
     private Signature signature;
 
