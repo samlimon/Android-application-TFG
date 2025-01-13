@@ -18,6 +18,8 @@ import com.example.liboqs.Sigs;
 import com.example.liboqs.Signature;
 
 import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -27,6 +29,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String ALGORITHM_NAME = "Dilithium2"; // Cambia a tu algoritmo deseado
     private Uri selectedFileUri;
     private Signature signature;
+    private byte[] privateKey;
+    private byte[] publicKey;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,6 +39,8 @@ public class MainActivity extends AppCompatActivity {
 
         Button selectFileButton = findViewById(R.id.selectFileButton);
         Button signFileButton = findViewById(R.id.signFileButton);
+        Button generateKeysButton = findViewById(R.id.generateKeysButton);
+        Button verifySignatureButton = findViewById(R.id.verifySignatureButton);
         TextView resultText = findViewById(R.id.resultText);
 
         // Inicializa la clase Sigs
@@ -68,12 +74,36 @@ public class MainActivity extends AppCompatActivity {
             selectFileLauncher.launch(intent);
         });
 
-        // Firmar archivo
-        signFileButton.setOnClickListener(v -> {
+        // Generar claves
+        generateKeysButton.setOnClickListener(v -> {
             try {
                 // Generar clave
                 signature = new Signature(ALGORITHM_NAME);
-                byte[] publicKey = signature.generate_keypair();
+                publicKey = signature.generate_keypair();
+                privateKey = signature.export_secret_key();
+
+                // Guardar las claves en archivos locales
+                saveToFile("publicKey.bin", publicKey);
+                saveToFile("privateKey.bin", privateKey);
+
+                // Mostrar resultados
+                resultText.setText("Claves generadas:\n\nClave pública: " + bytesToHex(publicKey) + "\n\nClave privada: " + bytesToHex(privateKey));
+
+            } catch (RuntimeException | IOException e) {
+                resultText.setText("Error: " + e.getMessage());
+            }
+        });
+
+        // Firmar archivo
+        signFileButton.setOnClickListener(v -> {
+            try {
+                if (privateKey == null) {
+                    resultText.setText("Primero genera las claves privadas.");
+                    return;
+                }
+
+                // Inicializar la firma con la clave privada
+                signature = new Signature(ALGORITHM_NAME, privateKey);
 
                 // Leer el archivo seleccionado
                 byte[] fileContent = readFileContent(selectedFileUri);
@@ -81,13 +111,34 @@ public class MainActivity extends AppCompatActivity {
                 // Firmar el contenido del archivo
                 byte[] signatureBytes = signature.sign(fileContent);
 
+                // Guardar la firma en un archivo
+                saveToFile("signature.bin", signatureBytes);
+
                 // Mostrar resultados
                 resultText.setText("Firma generada: " + bytesToHex(signatureBytes) + "\n\nClave pública: " + bytesToHex(publicKey));
 
-            } catch (RuntimeException e) {
+            } catch (RuntimeException | IOException e) {
                 resultText.setText("Error: " + e.getMessage());
-            } catch (IOException e) {
-                resultText.setText("Error al leer el archivo: " + e.getMessage());
+            }
+        });
+
+        // Verificar firma
+        verifySignatureButton.setOnClickListener(v -> {
+            try {
+                // Leer el archivo seleccionado
+                byte[] fileContent = readFileContent(selectedFileUri);
+
+                // Leer la firma desde el archivo
+                byte[] signatureBytes = readFromFile("signature.bin");
+
+                // Verificar la firma
+                boolean isValid = signature.verify(fileContent, signatureBytes, publicKey);
+
+                // Mostrar resultados
+                resultText.setText(isValid ? "Firma válida" : "Firma inválida");
+
+            } catch (RuntimeException | IOException e) {
+                resultText.setText("Error: " + e.getMessage());
             }
         });
     }
@@ -105,6 +156,18 @@ public class MainActivity extends AppCompatActivity {
         try (InputStream inputStream = getContentResolver().openInputStream(uri);
             BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream)) {
             return bufferedInputStream.readAllBytes(); // Leer todos los bytes del archivo
+        }
+    }
+
+    private void saveToFile(String fileName, byte[] data) throws IOException {
+        try (FileOutputStream fos = openFileOutput(fileName, MODE_PRIVATE)) {
+            fos.write(data);
+        }
+    }
+
+    private byte[] readFromFile(String fileName) throws IOException {
+        try (FileInputStream fis = openFileInput(fileName)) {
+            return fis.readAllBytes();
         }
     }
 
