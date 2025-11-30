@@ -4,11 +4,11 @@ plugins {
 
 android {
     namespace 'com.example.minibaseapp'
-    compileSdk 34
+    compileSdk = 34
 
     defaultConfig {
         applicationId "com.example.minibaseapp"
-        minSdk 30
+        minSdk 33
         targetSdk 34
         versionCode 1
         versionName "1.0"
@@ -36,6 +36,7 @@ dependencies {
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
     implementation project(':liboqs-android')
-
+    implementation "org.bouncycastle:bcprov-jdk18on:1.83"
+    implementation "org.bouncycastle:bcpkix-jdk18on:1.83"
 
 }

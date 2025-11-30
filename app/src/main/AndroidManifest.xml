@@ -15,7 +15,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MiniBaseApp"
-        tools:targetApi="31">
+        android:name=".MyApp"
+        >
 
         <!-- Declaración de la actividad principal con android:exported -->
         <activity
@@ -26,7 +27,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
+        <activity android:name=".SignKeyPairActivity"/>
+        <activity android:name=".SignWithCertActivity" />
+        <activity android:name=".CertificatesActivity" />
     </application>
 
 </manifest>

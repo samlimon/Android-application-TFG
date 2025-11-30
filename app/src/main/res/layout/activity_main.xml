@@ -1,38 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="24dp"
+    android:gravity="center"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 
     <Button
-        android:id="@+id/selectFileButton"
+        android:id="@+id/btnSignKeyPair"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Seleccionar Archivo" />
+        android:text="@string/btn_sign_key_pair"
+        android:layout_marginBottom="16dp" />
 
     <Button
-        android:id="@+id/signFileButton"
+        android:id="@+id/btnSignWithCert"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Firmar Archivo"
-        android:enabled="false" />
+        android:text="@string/btn_sign_with_cert"
+        android:layout_marginBottom="16dp" />
 
     <Button
-        android:id="@+id/generateKeysButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Generar Claves" />
-
-    <Button
-        android:id="@+id/verifySignatureButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Verificar Firma" />
-
-    <TextView
-        android:id="@+id/resultText"
+        android:id="@+id/btnCertificates"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp" />
+        android:text="@string/btn_certificates"
+        android:layout_marginBottom="16dp" />
 </LinearLayout>

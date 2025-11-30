@@ -3,15 +3,12 @@ plugins {
 }
 
 android {
-    compileSdkVersion 30
-    buildToolsVersion "30.0.0"
+    compileSdk 34
     namespace "com.example.liboqs_android"
 
     defaultConfig {
-        minSdkVersion 21
+        minSdk 21
         targetSdkVersion 33
-        versionCode 1
-        versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -25,9 +22,8 @@ android {
 
     buildTypes {
         release {
-            debuggable true
             jniDebuggable true
-            zipAlignEnabled true
+            //zipAlignEnabled true
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -47,13 +43,13 @@ android {
             // Verbose: https://stackoverflow.com/a/44578257/8524651
         }
     }
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE.md', 'META-INF/LICENSE-notice.md']
+        }
+    }
 
     // Needed after adding junit-jupiter: https://stackoverflow.com/questions/44342455/more-than-one-file-was-found-with-os-independent-path-meta-inf-license
-    packagingOptions {
-        exclude 'META-INF/DEPENDENCIES'
-        exclude 'META-INF/LICENSE.md'
-        exclude 'META-INF/LICENSE-notice.md'
-    }
 }
 
 dependencies {
