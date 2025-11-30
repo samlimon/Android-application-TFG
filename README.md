@@ -26,7 +26,7 @@ El proyecto sirve tanto como herramienta funcional como prueba de concepto didá
 
 ## 🧩 Funcionalidades actuales
 
-- Generación y almacenamiento de pares de claves. ** parte del proyecto anterior del que partía en un inicio
+- Generación y almacenamiento de pares de claves. (parte del proyecto previo del cual parte este trabajo)
 - Importación de certificados digitales pqc.
 - Listado de certificados disponibles.
 - Firma digital de documentos seleccionando un certificado.
