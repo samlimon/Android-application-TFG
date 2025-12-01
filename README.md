@@ -37,7 +37,7 @@ El proyecto sirve tanto como herramienta funcional como prueba de concepto didá
 
 ## 🔧 Tecnologías utilizadas
 
-- Android Studio (versión 2024/2025, Arctic Fox o posterior).
+- Android Studio Otter 2025.2.1
 - Java
 - API de Seguridad de Android.
 - KeyStore BouncyCastle dependiendo del modo de firma.
