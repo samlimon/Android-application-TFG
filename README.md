@@ -1,8 +1,8 @@
 # MiniBaseApp – Aplicación Android para gestión y firma digital de documentos  
 **Trabajo de Fin de Grado (TFG)**  
-Autor: Samuel Ignacio Limón Riesgo 
-Tutor: Andres Marin Lopez 
-Universidad: ETSIT UPM  
+- Autor: Samuel Ignacio Limón Riesgo 
+- Tutor: Andres Marin Lopez 
+- Universidad: ETSIT UPM  
 
 ---
 
