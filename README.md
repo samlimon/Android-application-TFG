@@ -57,13 +57,13 @@ v0.1 – 30/11/2025
 - Firma de documentos desacoplada, utilizando los certificados PQC almacenandos, ahora mismo la firma .bin generada se almacena en la propia aplicación
 
 v0.2 – 08/12/2025
--Actualización del sistema de almacenamiento de firmas generadas:
+- Actualización del sistema de almacenamiento de firmas generadas:
 Se reemplaza el almacenamiento interno de la aplicación por el gestor de archivos de Android, permitiendo que el usuario:
-  -Seleccione la carpeta de destino.
-  -Modifique libremente el nombre del archivo .bin generado.
-  -Tenga control total sobre dónde y cómo se guarda la firma.
+  - Seleccione la carpeta de destino.
+  - Modifique libremente el nombre del archivo .bin generado.
+  - Tenga control total sobre dónde y cómo se guarda la firma.
 
--Mejoras en la experiencia de uso (UX) y en la usabilidad general:
-  -Se añadieron mensajes más claros para mostrar el estado del proceso de firmado (éxito, error, flujo disponible, etc.).
-  -Se corrigió el problema de “estado estancado” tras firmar un documento: ahora la aplicación vuelve automáticamente a un estado inicial, permitiendo iniciar un nuevo proceso de firma sin tener que reiniciar la actividad.
+- Mejoras en la experiencia de uso (UX) y en la usabilidad general:
+  - Se añadieron mensajes más claros para mostrar el estado del proceso de firmado (éxito, error, flujo disponible, etc.).
+  - Se corrigió el problema de “estado estancado” tras firmar un documento: ahora la aplicación vuelve automáticamente a un estado inicial, permitiendo iniciar un nuevo proceso de firma sin tener que reiniciar la actividad.
 ---
