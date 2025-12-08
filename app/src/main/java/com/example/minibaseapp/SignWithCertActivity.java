@@ -21,9 +21,10 @@ import com.example.minibaseapp.crypto.PqcCertificateManager;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class SignWithCertActivity extends AppCompatActivity {
@@ -45,6 +46,10 @@ public class SignWithCertActivity extends AppCompatActivity {
     private Uri selectedFileUri;
 
     private ActivityResultLauncher<Intent> selectFileLauncher;
+    private ActivityResultLauncher<Intent> createSignatureFileLauncher;
+
+    // Firma generada en memoria (se limpia al salir de la Activity)
+    private byte[] lastSignatureBytes;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,6 +68,7 @@ public class SignWithCertActivity extends AppCompatActivity {
         btnSign.setEnabled(false);
 
         setupFilePicker();
+        setupCreateSignatureFileLauncher();
         setupSignButton();
 
         // Primero pedimos contraseña del almacén
@@ -71,16 +77,31 @@ public class SignWithCertActivity extends AppCompatActivity {
         btnChooseCert.setOnClickListener(v -> {
             if (aliasList.isEmpty()) {
                 Toast.makeText(this,
-                        "No hay certificados en el almacén. Añade uno primero.",
+                        "No hay certificados en el almacén. Añade uno primero en 'Gestionar certificados'.",
                         Toast.LENGTH_LONG).show();
             } else {
                 showCertSelectionDialog();
             }
         });
     }
+
     /**
-     * Lo primero es pedir la contraseña del almacen de certificados
-     * */
+     * Por seguridad, si el usuario sale de esta pantalla
+     * (la Activity deja de estar visible), borramos la firma de memoria.
+     */
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (lastSignatureBytes != null) {
+            Arrays.fill(lastSignatureBytes, (byte) 0);
+            lastSignatureBytes = null;
+        }
+    }
+
+    // ====================
+    // 1) Contraseña almacén
+    // ====================
+
     private void showKeystorePasswordDialog() {
         EditText et = new EditText(this);
         et.setHint("Contraseña del almacén");
@@ -110,9 +131,7 @@ public class SignWithCertActivity extends AppCompatActivity {
                 .setCancelable(false)
                 .show();
     }
-    /**
-     *  Cargamos todos los certificados guardados en el keystore, solo alias
-     * */
+
     private void loadCertificatesFromStore() {
         try {
             certsInStore = certManager.listCertificates(keystorePassword);
@@ -120,7 +139,6 @@ public class SignWithCertActivity extends AppCompatActivity {
 
             if (certsInStore.isEmpty()) {
                 tvStatus.setText("No hay certificados. Añade uno en 'Gestionar certificados'.");
-                // No hay alias → no tiene sentido mostrar otros mensajes
                 return;
             }
 
@@ -129,7 +147,6 @@ public class SignWithCertActivity extends AppCompatActivity {
             }
 
             // En este punto aún no hay certificado ni documento seleccionados
-            // Deja que updateStatusText() decida el mensaje adecuado
             updateStatusText();
 
         } catch (Exception e) {
@@ -137,9 +154,10 @@ public class SignWithCertActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     *  El usuario selecciona el certificado
-     * */
+    // ====================
+    // 2) Selección de certificado
+    // ====================
+
     private void showCertSelectionDialog() {
         String[] aliasArray = aliasList.toArray(new String[0]);
 
@@ -149,16 +167,22 @@ public class SignWithCertActivity extends AppCompatActivity {
                     selectedAlias = aliasArray[which];
                     tvSelectedCert.setText(selectedAlias);
 
-                    // Actualizamos el texto de estado según el nuevo estado global
+                    // Al cambiar el certificado, borramos cualquier firma anterior en memoria
+                    if (lastSignatureBytes != null) {
+                        Arrays.fill(lastSignatureBytes, (byte) 0);
+                        lastSignatureBytes = null;
+                    }
+
                     updateStatusText();
                     updateSignButtonState();
                 })
                 .show();
     }
 
-    /**
-     *  El usuario selecciona el documento para firmar
-     * */
+    // ====================
+    // 3) Selección de fichero a firmar
+    // ====================
+
     private void setupFilePicker() {
         selectFileLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -170,7 +194,12 @@ public class SignWithCertActivity extends AppCompatActivity {
                             tvSelectedFile.setText(displayName);
                         }
 
-                        // Actualizamos el texto de estado según el nuevo estado global
+                        // Al cambiar de fichero, invalidamos firmas anteriores en memoria
+                        if (lastSignatureBytes != null) {
+                            Arrays.fill(lastSignatureBytes, (byte) 0);
+                            lastSignatureBytes = null;
+                        }
+
                         updateStatusText();
                         updateSignButtonState();
                     }
@@ -192,6 +221,107 @@ public class SignWithCertActivity extends AppCompatActivity {
         });
     }
 
+    // ====================
+    // 4) Lanzador para "guardar firma como..."
+    // ====================
+
+    private void setupCreateSignatureFileLauncher() {
+        createSignatureFileLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        Uri uri = result.getData().getData();
+                        if (uri != null && lastSignatureBytes != null) {
+                            try (OutputStream os = getContentResolver().openOutputStream(uri)) {
+                                if (os == null) {
+                                    tvStatus.setText("No se pudo abrir el destino para guardar la firma.");
+                                    return;
+                                }
+                                os.write(lastSignatureBytes);
+                                os.flush();
+
+                                // 1) Mensaje claro de éxito
+                                tvStatus.setText(
+                                        "Documento firmado y firma guardada correctamente.\n" +
+                                                "Puedes firmar otro documento si lo deseas."
+                                );
+
+                                // 2) Limpiamos la firma de memoria
+                                Arrays.fill(lastSignatureBytes, (byte) 0);
+                                lastSignatureBytes = null;
+
+                                // 3) Reseteamos la selección de certificado y documento
+                                selectedAlias = null;
+                                selectedFileUri = null;
+
+                                // Textos "estado inicial" (puedes ajustarlos a lo que tengas en el XML)
+                                tvSelectedCert.setText("Ningún certificado seleccionado");
+                                tvSelectedFile.setText("Ningún documento seleccionado");
+
+                                // 4) Deshabilitamos el botón Firmar hasta nueva selección
+                                updateSignButtonState();
+                                // OJO: no llamamos a updateStatusText() aquí para no machacar
+                                // el mensaje de éxito que acabamos de poner en tvStatus.
+
+                            } catch (Exception e) {
+                                tvStatus.setText("Error al guardar la firma: " + e.getMessage());
+                            }
+                        } else {
+                            // Esto solo debería ocurrir si algo raro ha pasado
+                            tvStatus.setText("No hay firma disponible para guardar.");
+                        }
+                    } else {
+                        // Usuario canceló el diálogo de guardar
+                        tvStatus.setText(
+                                "Documento firmado, pero el archivo de firma no se ha guardado.\n" +
+                                        "Puedes pulsar de nuevo 'Firmar' para elegir dónde guardarla."
+                        );
+                        // Aquí NO reseteamos nada: el usuario puede volver a intentar guardar
+                        // con la misma firma si quiere.
+                    }
+                }
+        );
+    }
+
+    /**
+     * Abre el diálogo del sistema para que el usuario elija dónde guardar la firma.
+     */
+    private void launchCreateSignatureDocument() {
+        if (lastSignatureBytes == null || lastSignatureBytes.length == 0) {
+            tvStatus.setText("No hay firma disponible para guardar.");
+            return;
+        }
+
+        // Nombre base del certificado
+        String aliasPart = (selectedAlias != null ? selectedAlias : "cert");
+
+        // Nombre del documento (por ejemplo archivoPrueba.pdf)
+        String docName = tvSelectedFile.getText().toString();
+        if (docName == null || docName.isEmpty()) {
+            docName = "documento";
+        } else {
+            // Quitamos extensión si tiene
+            int dotIndex = docName.lastIndexOf('.');
+            if (dotIndex > 0) {
+                docName = docName.substring(0, dotIndex);
+            }
+        }
+
+        // Ejemplo: firma_client-11_archivoPrueba.bin
+        String suggestedName = "firma_" + aliasPart + "_" + docName + ".bin";
+
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/octet-stream");
+        intent.putExtra(Intent.EXTRA_TITLE, suggestedName);
+
+        createSignatureFileLauncher.launch(intent);
+    }
+
+    // ====================
+    // 5) Botón "Firmar"
+    // ====================
+
     private void setupSignButton() {
         btnSign.setOnClickListener(v -> {
             if (selectedAlias == null) {
@@ -211,16 +341,19 @@ public class SignWithCertActivity extends AppCompatActivity {
                 byte[] data = readFileContent(selectedFileUri);
                 byte[] sig = certManager.signDataWithAlias(selectedAlias, keystorePassword, data);
 
-                // Firma desacoplada: guardamos en fichero independiente
-                String sigFileName = "signature_" + selectedAlias + ".bin";
-                try (FileOutputStream fos = openFileOutput(sigFileName, MODE_PRIVATE)) {
-                    fos.write(sig);
+                // Guardamos la firma en memoria para poder exportarla donde el usuario quiera
+                if (lastSignatureBytes != null) {
+                    Arrays.fill(lastSignatureBytes, (byte) 0);
                 }
+                lastSignatureBytes = sig;
 
-                tvStatus.setText("Documento firmado correctamente.\n" +
-                        "Firma generada con " + selectedAlias +
-                        "\nGuardada como " + sigFileName +
-                        " (" + sig.length + " bytes)");
+                tvStatus.setText(
+                        "Documento firmado correctamente con el certificado '" + selectedAlias + "'.\n" +
+                                "Ahora elige dónde guardar el archivo de firma y si quieres cambia el nombre sugerido."
+                );
+
+                // Lanzamos el diálogo de "guardar como"
+                launchCreateSignatureDocument();
 
             } catch (Exception e) {
                 tvStatus.setText("Error al firmar: " + e.getMessage());
@@ -228,21 +361,22 @@ public class SignWithCertActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Activa o desactiva el botón "Firmar" según si hay certificado y documento seleccionados.
-     */
+    // ====================
+    // 6) Estado UI (texto y botón Firmar)
+    // ====================
+
     private void updateSignButtonState() {
         btnSign.setEnabled(selectedAlias != null && selectedFileUri != null);
     }
 
     /**
-     * Actualiza el mensaje de estado (tvStatus) en función de:
+     * Mensajes guiando al usuario según:
      *  - si hay certificado seleccionado,
      *  - si hay documento seleccionado.
      */
     private void updateStatusText() {
         if (aliasList.isEmpty()) {
-            // Sin certificados en el almacén, ya se gestiona en loadCertificatesFromStore()
+            // Sin certificados, ya se informa en loadCertificatesFromStore
             return;
         }
 
@@ -256,6 +390,10 @@ public class SignWithCertActivity extends AppCompatActivity {
             tvStatus.setText("Certificado y documento seleccionados. Pulsa en 'Firmar'.");
         }
     }
+
+    // ====================
+    // 7) Utilidades de ficheros
+    // ====================
 
     /**
      * Obtiene un nombre legible (ej. archivoPrueba.pdf) a partir de una Uri.
