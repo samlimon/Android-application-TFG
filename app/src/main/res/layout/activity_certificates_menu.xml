@@ -5,29 +5,26 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <TextView
-        android:gravity="center"
-        android:layout_marginTop="100dp"
-        android:layout_marginBottom="80dp"
+    <Button
+        android:layout_marginTop="150dp"
+        android:id="@+id/btnManageCerts"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Selecciona con qué quieres trabajar:"
-        android:textStyle="bold"
-        android:textSize="18sp" />
+        android:text="Gestionar certificados" />
 
     <Button
-        android:layout_marginTop="30dp"
-        android:id="@+id/btnKeyPair"
+        android:layout_marginTop="50dp"
+        android:id="@+id/btnSignWithCert"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Par de claves"
-        android:layout_marginBottom="16dp" />
+        android:text="Firmar documento" />
 
     <Button
-        android:layout_marginTop="30dp"
-        android:id="@+id/btnCertificates"
+        android:layout_marginTop="50dp"
+        android:id="@+id/btnVerifySignature"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Certificados digitales" />
+        android:text="Verificar firma" />
+
 
 </LinearLayout>

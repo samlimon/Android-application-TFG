@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp">
+
+        <!-- Selección de certificado del firmante -->
+        <Button
+            android:id="@+id/btnSelectCert"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Seleccionar certificado del firmante" />
+
+        <TextView
+            android:id="@+id/tvSelectedCert"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ningún certificado seleccionado"
+            android:layout_marginTop="4dp"
+            android:textSize="14sp" />
+
+        <!-- Selección de documento -->
+        <Button
+            android:id="@+id/btnSelectDocument"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Seleccionar documento"
+            android:layout_marginTop="16dp" />
+
+        <TextView
+            android:id="@+id/tvSelectedDocument"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ningún documento seleccionado"
+            android:layout_marginTop="4dp"
+            android:textSize="14sp" />
+
+        <!-- Selección de fichero de firma -->
+        <Button
+            android:id="@+id/btnSelectSignature"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Seleccionar fichero de firma (.bin)"
+            android:layout_marginTop="16dp" />
+
+        <TextView
+            android:id="@+id/tvSelectedSignature"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ningún fichero de firma seleccionado"
+            android:layout_marginTop="4dp"
+            android:textSize="14sp" />
+
+        <!-- Botón de verificación -->
+        <Button
+            android:id="@+id/btnVerify"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Verificar firma"
+            android:enabled="false"
+            android:layout_marginTop="24dp" />
+
+        <!-- Resultado para usuario (resumen) -->
+        <TextView
+            android:id="@+id/tvSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Selecciona certificado, documento y firma para empezar."
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:layout_marginTop="24dp" />
+
+        <!-- Detalles técnicos -->
+        <TextView
+            android:id="@+id/tvDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textSize="13sp"
+            android:layout_marginTop="12dp" />
+
+        <Button
+            android:id="@+id/btnResetVerification"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Nueva verificación"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+</ScrollView>

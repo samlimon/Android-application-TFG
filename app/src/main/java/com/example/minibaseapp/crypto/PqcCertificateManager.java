@@ -4,6 +4,8 @@ import android.content.Context;
 import android.net.Uri;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
+
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMParser;
@@ -21,10 +23,13 @@ import java.io.InputStreamReader;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.Security;
 import java.security.Signature;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 
 import java.nio.charset.StandardCharsets;
@@ -32,6 +37,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Locale;
 
 public class PqcCertificateManager {
 
@@ -63,6 +69,36 @@ public class PqcCertificateManager {
             this.certificate = certificate;
         }
     }
+
+    /**
+     * Clase auxiliar para la verificación de certificados
+     * Con algoritmo, checks básicos, confianza CA
+     * */
+    public static class CertValidationResult {
+
+        // Algoritmo / tipo
+        public String algorithm;
+        public boolean isPqc;
+
+        // Checks básicos
+        public boolean timeValid;
+        public boolean isEndEntity;
+        public boolean keyUsageOk;
+
+        // CA opcional
+        public boolean caSignatureChecked;  // true si hemos intentado verificar
+        public boolean caSignatureOk;       // true si la verificación con la CA ha ido bien
+
+        // Texto explicativo para logs / UI técnica
+        public String diagnostics;
+
+        // Helpers cómodos
+        public boolean isOverallAcceptableForSigning() {
+            // Aquí puedes decidir tu criterio mínimo
+            return timeValid && isEndEntity && keyUsageOk;
+        }
+    }
+
 
     /** Pasamos la uri (documento .pem y .key que nos sube el usuario del dispositivo)
     * a bytes para luego poder importar el certificado y la clave*/
@@ -272,6 +308,138 @@ public class PqcCertificateManager {
         sig.initSign(privateKey);
         sig.update(data);
         return sig.sign();
+    }
+
+    /**
+     * Carga un certificado X.509 desde un Uri (por ejemplo, un .pem que el usuario selecciona
+     * con el gestor de archivos del dispositivo).
+     *
+     * Reutiliza el parseo PEM ya existente en parseCertificateFromPemBytes(...).
+     */
+    public X509Certificate loadCertificateFromUri(Context ctx, Uri certUri) throws Exception {
+        // Leemos todos los bytes del fichero (PEM)
+        byte[] certBytes = readAllBytesFromUri(certUri);
+        // Reutilizamos el parseador PEM de BouncyCastle
+        return parseCertificateFromPemBytes(certBytes);
+    }
+
+    /**
+     * Verifica criptográficamente una firma sobre unos datos usando la clave pública
+     * del certificado proporcionado.
+     *
+     * @param cert           Certificado del firmante (X.509)
+     * @param data           Datos originales (documento) en bytes
+     * @param signatureBytes Firma en bytes (por ejemplo, el .bin generado por la app)
+     * @return true si la firma es válida para esos datos y ese certificado, false en caso contrario
+     */
+    public boolean verifyDataWithCertificate(
+            X509Certificate cert,
+            byte[] data,
+            byte[] signatureBytes
+    ) throws Exception {
+
+        PublicKey publicKey = cert.getPublicKey();
+        String algName = publicKey.getAlgorithm();
+        if (algName == null || algName.isEmpty()) {
+            // Fallback por si acaso
+            algName = cert.getSigAlgName();
+        }
+
+        Log.d(TAG, "Verificando firma con algoritmo: " + algName);
+
+        Signature sig = Signature.getInstance(algName, KEYSTORE_PROVIDER);
+        sig.initVerify(publicKey);
+        sig.update(data);
+        return sig.verify(signatureBytes);
+    }
+
+    public CertValidationResult validateCertificate(
+            X509Certificate userCert,
+            @Nullable X509Certificate caCert
+    ) {
+        CertValidationResult result = new CertValidationResult();
+        StringBuilder diag = new StringBuilder();
+
+        // 1) Algoritmo e indicador PQC
+        String algFromKey = null;
+        try {
+            algFromKey = userCert.getPublicKey().getAlgorithm();
+        } catch (Exception ignored) {
+        }
+        String algFromSig = null;
+        try {
+            algFromSig = userCert.getSigAlgName();
+        } catch (Exception ignored) {
+        }
+
+        String algorithm = (algFromKey != null) ? algFromKey :
+                (algFromSig != null ? algFromSig : "DESCONOCIDO");
+        result.algorithm = algorithm;
+
+        String algLower = algorithm.toLowerCase(Locale.ROOT);
+        result.isPqc = algLower.contains("ml-dsa") || algLower.contains("dilithium");
+
+        diag.append("Algoritmo del certificado: ").append(algorithm)
+                .append(result.isPqc ? " (PQC)\n" : "\n");
+
+        // 2) Vigencia temporal
+        try {
+            userCert.checkValidity();
+            result.timeValid = true;
+            diag.append("Vigencia temporal: OK (dentro de notBefore/notAfter)\n");
+        } catch (CertificateExpiredException e) {
+            result.timeValid = false;
+            diag.append("Vigencia temporal: NO VÁLIDA (certificado caducado)\n");
+        } catch (CertificateNotYetValidException e) {
+            result.timeValid = false;
+            diag.append("Vigencia temporal: NO VÁLIDA (todavía no es válido)\n");
+        }
+
+        // 3) BasicConstraints (end-entity vs CA)
+        int bc = userCert.getBasicConstraints();
+        // En X.509: <0 => no es CA; >=0 => es CA
+        result.isEndEntity = (bc < 0);
+        if (bc < 0) {
+            diag.append("BasicConstraints: certificado de usuario (no CA)\n");
+        } else {
+            diag.append("BasicConstraints: certificado de CA (no debería usarse directamente para firmar documentos)\n");
+        }
+
+        // 4) KeyUsage (digitalSignature)
+        boolean[] keyUsage = userCert.getKeyUsage();
+        if (keyUsage == null) {
+            // Sin restricción explícita
+            result.keyUsageOk = true;
+            diag.append("KeyUsage: no presente (se asume uso permitido para firma)\n");
+        } else {
+            boolean digitalSignature = keyUsage.length > 0 && keyUsage[0];
+            result.keyUsageOk = digitalSignature;
+            diag.append("KeyUsage.digitalSignature: ")
+                    .append(digitalSignature ? "true\n" : "false (no apropiado para firma)\n");
+        }
+
+        // 5) Comprobar firma con la CA, si nos dan una
+        if (caCert != null) {
+            result.caSignatureChecked = true;
+            try {
+                PublicKey caPublicKey = caCert.getPublicKey();
+                userCert.verify(caPublicKey, KEYSTORE_PROVIDER); // por ejemplo "BC"
+                result.caSignatureOk = true;
+                diag.append("Firma del certificado por la CA proporcionada: OK\n");
+            } catch (Exception e) {
+                result.caSignatureOk = false;
+                diag.append("Firma del certificado por la CA proporcionada: NO VÁLIDA o NO COMPROBABLE (")
+                        .append(e.getClass().getSimpleName()).append(": ")
+                        .append(e.getMessage()).append(")\n");
+            }
+        } else {
+            result.caSignatureChecked = false;
+            result.caSignatureOk = false;
+            diag.append("Firma por CA: no comprobada (no se ha proporcionado certificado de CA)\n");
+        }
+
+        result.diagnostics = diag.toString();
+        return result;
     }
 
 }

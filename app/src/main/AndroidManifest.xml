@@ -30,6 +30,8 @@
         <activity android:name=".SignKeyPairActivity"/>
         <activity android:name=".SignWithCertActivity" />
         <activity android:name=".CertificatesActivity" />
+        <activity android:name=".CertificatesMenuActivity" />
+        <activity android:name=".VerifySignatureActivity" />
     </application>
 
 </manifest>

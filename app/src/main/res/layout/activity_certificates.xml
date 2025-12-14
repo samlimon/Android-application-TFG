@@ -5,9 +5,10 @@
 
     <LinearLayout
         android:orientation="vertical"
-        android:padding="16dp"
+        android:padding="24dp"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp">
 
         <Button
             android:id="@+id/btnAddCredential"
@@ -18,12 +19,13 @@
 
         <!-- Lista de certificados -->
         <TextView
+            android:layout_marginTop="40dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Certificados almacenados"
             android:textStyle="bold"
             android:textSize="18sp"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="12dp" />
 
         <TextView
             android:id="@+id/tvCertList"

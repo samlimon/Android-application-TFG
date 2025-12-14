@@ -8,28 +8,25 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
 
+    private Button btnKeyPair;
+    private Button btnCertificates;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button btnSignKeyPair = findViewById(R.id.btnSignKeyPair);
-        Button btnSignWithCert = findViewById(R.id.btnSignWithCert);
-        Button btnCertificates = findViewById(R.id.btnCertificates);
+        btnKeyPair = findViewById(R.id.btnKeyPair);
+        btnCertificates = findViewById(R.id.btnCertificates);
 
-        btnSignKeyPair.setOnClickListener(v -> {
-            Intent intent = new Intent(this, SignKeyPairActivity.class);
-            startActivity(intent);
-        });
-
-        btnSignWithCert.setOnClickListener(v -> {
-            Intent intent = new Intent(this, SignWithCertActivity.class);
-            startActivity(intent);
+        btnKeyPair.setOnClickListener(v -> {
+            Intent i = new Intent(MainActivity.this, SignKeyPairActivity.class);
+            startActivity(i);
         });
 
         btnCertificates.setOnClickListener(v -> {
-            Intent intent = new Intent(this, CertificatesActivity.class);
-            startActivity(intent);
+            Intent i = new Intent(MainActivity.this, CertificatesMenuActivity.class);
+            startActivity(i);
         });
     }
 }
