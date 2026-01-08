@@ -4,8 +4,10 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.provider.OpenableColumns;
 import android.text.InputType;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -18,6 +20,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.minibaseapp.crypto.ImportedCert;
 import com.example.minibaseapp.crypto.PqcCertificateManager;
+import com.example.minibaseapp.security.KeystoreAuthManager;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -26,8 +29,11 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 public class SignWithCertActivity extends AppCompatActivity {
+
+    private static final String TAG_BENCH = "BENCH";
 
     private TextView tvSelectedCert;
     private TextView tvSelectedFile;
@@ -37,6 +43,9 @@ public class SignWithCertActivity extends AppCompatActivity {
     private Button btnSign;
 
     private PqcCertificateManager certManager;
+
+    // acceso por huella/contraseña
+    private KeystoreAuthManager ksAuth;
     private char[] keystorePassword;
 
     private List<ImportedCert> certsInStore = new ArrayList<>();
@@ -65,14 +74,21 @@ public class SignWithCertActivity extends AppCompatActivity {
 
         certManager = new PqcCertificateManager(this);
 
+        try {
+            ksAuth = new KeystoreAuthManager(this);
+        } catch (Exception e) {
+            ksAuth = null;
+            Toast.makeText(this, "Aviso: biometría no disponible. Se usará contraseña.", Toast.LENGTH_LONG).show();
+        }
+
         btnSign.setEnabled(false);
 
         setupFilePicker();
         setupCreateSignatureFileLauncher();
         setupSignButton();
 
-        // Primero pedimos contraseña del almacén
-        showKeystorePasswordDialog();
+        // Antes pedías contraseña siempre: ahora intentamos huella si está configurada
+        openKeystoreAndLoadCertificates();
 
         btnChooseCert.setOnClickListener(v -> {
             if (aliasList.isEmpty()) {
@@ -85,23 +101,50 @@ public class SignWithCertActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Por seguridad, si el usuario sale de esta pantalla
-     * (la Activity deja de estar visible), borramos la firma de memoria.
-     */
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        if (ksAuth != null) ksAuth.clearCachedPassword();
+
+        if (keystorePassword != null) {
+            Arrays.fill(keystorePassword, '\0');
+            keystorePassword = null;
+        }
+
         if (lastSignatureBytes != null) {
             Arrays.fill(lastSignatureBytes, (byte) 0);
             lastSignatureBytes = null;
         }
     }
 
-    // ====================
-    // 1) Contraseña almacén
-    // ====================
+    // Abrir almacén: huella o contraseña
+    private void openKeystoreAndLoadCertificates() {
+        if (ksAuth != null && ksAuth.hasStoredPassword()) {
+            tvStatus.setText("Autentícate con huella para abrir el almacén de certificados.");
+            ksAuth.requestKeystorePassword(this, getMainExecutor(), new KeystoreAuthManager.PasswordCallback() {
+                @Override
+                public void onPassword(char[] password) {
+                    keystorePassword = password;
+                    loadCertificatesFromStore();
+                }
 
+                @Override
+                public void onCancelled() {
+                    showKeystorePasswordDialog();
+                }
+
+                @Override
+                public void onError(String message) {
+                    showKeystorePasswordDialog();
+                }
+            });
+        } else {
+            showKeystorePasswordDialog();
+        }
+    }
+
+    // Contraseña del almacén
     private void showKeystorePasswordDialog() {
         EditText et = new EditText(this);
         et.setHint("Contraseña del almacén");
@@ -121,6 +164,9 @@ public class SignWithCertActivity extends AppCompatActivity {
                     }
                     keystorePassword = pwd.toCharArray();
                     loadCertificatesFromStore();
+
+                    // Ofrecer activar huella si aún no está configurada
+                    offerEnableBiometricsIfPossible();
                 })
                 .setNegativeButton("Cancelar", (dialog, which) -> {
                     Toast.makeText(this,
@@ -129,6 +175,42 @@ public class SignWithCertActivity extends AppCompatActivity {
                     finish();
                 })
                 .setCancelable(false)
+                .show();
+    }
+
+    private void offerEnableBiometricsIfPossible() {
+        if (ksAuth == null) return;
+        if (keystorePassword == null) return;
+        if (ksAuth.hasStoredPassword()) return; // ya activado
+
+        new AlertDialog.Builder(this)
+                .setTitle("Activar huella")
+                .setMessage("¿Quieres usar tu huella para acceder al almacén a partir de ahora?\n\n" +
+                        "La contraseña se guardará cifrada y protegida por biometría.")
+                .setPositiveButton("Sí", (d, w) -> {
+                    ksAuth.enableBiometricsForPassword(
+                            this,
+                            getMainExecutor(),
+                            keystorePassword,
+                            () -> Toast.makeText(this,
+                                    "Huella activada. La próxima vez no tendrás que introducir contraseña.",
+                                    Toast.LENGTH_LONG).show(),
+                            new KeystoreAuthManager.PasswordCallback() {
+                                @Override public void onPassword(char[] p) {}
+                                @Override public void onCancelled() {
+                                    Toast.makeText(SignWithCertActivity.this,
+                                            "Activación de huella cancelada.",
+                                            Toast.LENGTH_SHORT).show();
+                                }
+                                @Override public void onError(String msg) {
+                                    Toast.makeText(SignWithCertActivity.this,
+                                            "No se pudo activar huella: " + msg,
+                                            Toast.LENGTH_LONG).show();
+                                }
+                            }
+                    );
+                })
+                .setNegativeButton("No", null)
                 .show();
     }
 
@@ -146,7 +228,6 @@ public class SignWithCertActivity extends AppCompatActivity {
                 aliasList.add(c.alias);
             }
 
-            // En este punto aún no hay certificado ni documento seleccionados
             updateStatusText();
 
         } catch (Exception e) {
@@ -154,10 +235,7 @@ public class SignWithCertActivity extends AppCompatActivity {
         }
     }
 
-    // ====================
-    // 2) Selección de certificado
-    // ====================
-
+    // Selección del certificado con el que firmar
     private void showCertSelectionDialog() {
         String[] aliasArray = aliasList.toArray(new String[0]);
 
@@ -167,7 +245,6 @@ public class SignWithCertActivity extends AppCompatActivity {
                     selectedAlias = aliasArray[which];
                     tvSelectedCert.setText(selectedAlias);
 
-                    // Al cambiar el certificado, borramos cualquier firma anterior en memoria
                     if (lastSignatureBytes != null) {
                         Arrays.fill(lastSignatureBytes, (byte) 0);
                         lastSignatureBytes = null;
@@ -179,10 +256,7 @@ public class SignWithCertActivity extends AppCompatActivity {
                 .show();
     }
 
-    // ====================
-    // 3) Selección de fichero a firmar
-    // ====================
-
+    // Selección del fichero a firmar
     private void setupFilePicker() {
         selectFileLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -194,7 +268,6 @@ public class SignWithCertActivity extends AppCompatActivity {
                             tvSelectedFile.setText(displayName);
                         }
 
-                        // Al cambiar de fichero, invalidamos firmas anteriores en memoria
                         if (lastSignatureBytes != null) {
                             Arrays.fill(lastSignatureBytes, (byte) 0);
                             lastSignatureBytes = null;
@@ -210,7 +283,6 @@ public class SignWithCertActivity extends AppCompatActivity {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
 
-            // Aceptamos PDF y texto plano como casos típicos
             intent.setType("*/*");
             intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
                     "application/pdf",
@@ -221,10 +293,7 @@ public class SignWithCertActivity extends AppCompatActivity {
         });
     }
 
-    // ====================
-    // 4) Lanzador para "guardar firma como..."
-    // ====================
-
+    // Guardar firma como...
     private void setupCreateSignatureFileLauncher() {
         createSignatureFileLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -240,74 +309,56 @@ public class SignWithCertActivity extends AppCompatActivity {
                                 os.write(lastSignatureBytes);
                                 os.flush();
 
-                                // 1) Mensaje claro de éxito
                                 tvStatus.setText(
                                         "Documento firmado y firma guardada correctamente.\n" +
                                                 "Puedes firmar otro documento si lo deseas."
                                 );
 
-                                // 2) Limpiamos la firma de memoria
                                 Arrays.fill(lastSignatureBytes, (byte) 0);
                                 lastSignatureBytes = null;
 
-                                // 3) Reseteamos la selección de certificado y documento
                                 selectedAlias = null;
                                 selectedFileUri = null;
 
-                                // Textos "estado inicial" (puedes ajustarlos a lo que tengas en el XML)
                                 tvSelectedCert.setText("Ningún certificado seleccionado");
                                 tvSelectedFile.setText("Ningún documento seleccionado");
 
-                                // 4) Deshabilitamos el botón Firmar hasta nueva selección
                                 updateSignButtonState();
-                                // OJO: no llamamos a updateStatusText() aquí para no machacar
-                                // el mensaje de éxito que acabamos de poner en tvStatus.
 
                             } catch (Exception e) {
                                 tvStatus.setText("Error al guardar la firma: " + e.getMessage());
                             }
                         } else {
-                            // Esto solo debería ocurrir si algo raro ha pasado
                             tvStatus.setText("No hay firma disponible para guardar.");
                         }
                     } else {
-                        // Usuario canceló el diálogo de guardar
                         tvStatus.setText(
                                 "Documento firmado, pero el archivo de firma no se ha guardado.\n" +
                                         "Puedes pulsar de nuevo 'Firmar' para elegir dónde guardarla."
                         );
-                        // Aquí NO reseteamos nada: el usuario puede volver a intentar guardar
-                        // con la misma firma si quiere.
                     }
                 }
         );
     }
 
-    /**
-     * Abre el diálogo del sistema para que el usuario elija dónde guardar la firma.
-     */
     private void launchCreateSignatureDocument() {
         if (lastSignatureBytes == null || lastSignatureBytes.length == 0) {
             tvStatus.setText("No hay firma disponible para guardar.");
             return;
         }
 
-        // Nombre base del certificado
         String aliasPart = (selectedAlias != null ? selectedAlias : "cert");
 
-        // Nombre del documento (por ejemplo archivoPrueba.pdf)
         String docName = tvSelectedFile.getText().toString();
         if (docName == null || docName.isEmpty()) {
             docName = "documento";
         } else {
-            // Quitamos extensión si tiene
             int dotIndex = docName.lastIndexOf('.');
             if (dotIndex > 0) {
                 docName = docName.substring(0, dotIndex);
             }
         }
 
-        // Ejemplo: firma_client-11_archivoPrueba.bin
         String suggestedName = "firma_" + aliasPart + "_" + docName + ".bin";
 
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
@@ -318,10 +369,7 @@ public class SignWithCertActivity extends AppCompatActivity {
         createSignatureFileLauncher.launch(intent);
     }
 
-    // ====================
-    // 5) Botón "Firmar"
-    // ====================
-
+    // Firmado del documento
     private void setupSignButton() {
         btnSign.setOnClickListener(v -> {
             if (selectedAlias == null) {
@@ -333,15 +381,24 @@ public class SignWithCertActivity extends AppCompatActivity {
                 return;
             }
             if (keystorePassword == null) {
-                tvStatus.setText("No se ha establecido contraseña del almacén.");
+                tvStatus.setText("No se ha abierto el almacén (contraseña/huella).");
                 return;
             }
+
+            // Medicion del firmado
+            final long t0 = SystemClock.elapsedRealtimeNanos();
 
             try {
                 byte[] data = readFileContent(selectedFileUri);
                 byte[] sig = certManager.signDataWithAlias(selectedAlias, keystorePassword, data);
 
-                // Guardamos la firma en memoria para poder exportarla donde el usuario quiera
+                //STOP TIMER
+                double ms = (SystemClock.elapsedRealtimeNanos() - t0) / 1_000_000.0;
+
+                // Log
+                Log.i(TAG_BENCH, "SIGN_MS=" + String.format(Locale.US, "%.3f", ms)
+                        + " alias=" + selectedAlias);
+
                 if (lastSignatureBytes != null) {
                     Arrays.fill(lastSignatureBytes, (byte) 0);
                 }
@@ -352,31 +409,23 @@ public class SignWithCertActivity extends AppCompatActivity {
                                 "Ahora elige dónde guardar el archivo de firma y si quieres cambia el nombre sugerido."
                 );
 
-                // Lanzamos el diálogo de "guardar como"
+                // SAF (no entra en el benchmark)
                 launchCreateSignatureDocument();
 
             } catch (Exception e) {
+                // Si quieres que el benchmark también salga en errores, podrías loguearlo aquí con ok=false
                 tvStatus.setText("Error al firmar: " + e.getMessage());
             }
         });
     }
 
-    // ====================
-    // 6) Estado UI (texto y botón Firmar)
-    // ====================
-
+    // Estado UI
     private void updateSignButtonState() {
         btnSign.setEnabled(selectedAlias != null && selectedFileUri != null);
     }
 
-    /**
-     * Mensajes guiando al usuario según:
-     *  - si hay certificado seleccionado,
-     *  - si hay documento seleccionado.
-     */
     private void updateStatusText() {
         if (aliasList.isEmpty()) {
-            // Sin certificados, ya se informa en loadCertificatesFromStore
             return;
         }
 
@@ -391,13 +440,7 @@ public class SignWithCertActivity extends AppCompatActivity {
         }
     }
 
-    // ====================
-    // 7) Utilidades de ficheros
-    // ====================
-
-    /**
-     * Obtiene un nombre legible (ej. archivoPrueba.pdf) a partir de una Uri.
-     */
+    // Utilidades de ficheros
     private String getDisplayNameFromUri(Uri uri) {
         String result = null;
 
@@ -415,8 +458,7 @@ public class SignWithCertActivity extends AppCompatActivity {
                         result = cursor.getString(nameIndex);
                     }
                 }
-            } catch (Exception e) {
-                // ignoramos y usamos fallback
+            } catch (Exception ignored) {
             }
         }
 
@@ -428,9 +470,6 @@ public class SignWithCertActivity extends AppCompatActivity {
         return result;
     }
 
-    /**
-     * Lee todos los bytes del fichero apuntado por la Uri.
-     */
     private byte[] readFileContent(Uri uri) {
         try (InputStream in = getContentResolver().openInputStream(uri);
              BufferedInputStream bin = new BufferedInputStream(in);

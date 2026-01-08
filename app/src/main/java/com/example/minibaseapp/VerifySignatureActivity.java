@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.provider.OpenableColumns;
 import android.view.View;
 import android.widget.Button;
@@ -19,8 +20,11 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.cert.X509Certificate;
+import java.util.Locale;
 
 public class VerifySignatureActivity extends AppCompatActivity {
+
+    private static final String TAG_BENCH = "BENCH";
 
     private Button btnSelectCert;
     private Button btnSelectDocument;
@@ -57,6 +61,11 @@ public class VerifySignatureActivity extends AppCompatActivity {
         setupLaunchers();
         setupButtons();
         updateVerifyButtonState();
+
+        // Estado inicial consistente
+        btnResetVerification.setVisibility(View.GONE);
+        tvDetails.setText("");
+        tvSummary.setText("Selecciona certificado, documento y fichero de firma para empezar.");
     }
 
     private void initViews() {
@@ -65,6 +74,7 @@ public class VerifySignatureActivity extends AppCompatActivity {
         btnSelectSignature = findViewById(R.id.btnSelectSignature);
         btnVerify = findViewById(R.id.btnVerify);
         btnResetVerification = findViewById(R.id.btnResetVerification);
+
         tvSelectedCert = findViewById(R.id.tvSelectedCert);
         tvSelectedDocument = findViewById(R.id.tvSelectedDocument);
         tvSelectedSignature = findViewById(R.id.tvSelectedSignature);
@@ -83,17 +93,19 @@ public class VerifySignatureActivity extends AppCompatActivity {
                             selectedCertUri = uri;
                             tvSelectedCert.setText(getDisplayNameFromUri(uri));
 
-                            // Intentamos cargar el X509Certificate
                             try {
                                 selectedCert = certManager.loadCertificateFromUri(
                                         getApplicationContext(),
                                         uri
                                 );
-                                //tvSummary.setText("Certificado cargado. Ahora selecciona documento y fichero de firma.");
                             } catch (Exception e) {
                                 selectedCert = null;
                                 tvSummary.setText("Error al leer el certificado: " + e.getMessage());
                             }
+
+                            // Si cambias selección, ocultamos botón de reset hasta que haya verificación real
+                            btnResetVerification.setVisibility(View.GONE);
+                            tvDetails.setText("");
 
                             updateVerifyButtonState();
                         }
@@ -110,6 +122,10 @@ public class VerifySignatureActivity extends AppCompatActivity {
                         if (uri != null) {
                             selectedDocumentUri = uri;
                             tvSelectedDocument.setText(getDisplayNameFromUri(uri));
+
+                            btnResetVerification.setVisibility(View.GONE);
+                            tvDetails.setText("");
+
                             updateVerifyButtonState();
                         }
                     }
@@ -125,6 +141,10 @@ public class VerifySignatureActivity extends AppCompatActivity {
                         if (uri != null) {
                             selectedSignatureUri = uri;
                             tvSelectedSignature.setText(getDisplayNameFromUri(uri));
+
+                            btnResetVerification.setVisibility(View.GONE);
+                            tvDetails.setText("");
+
                             updateVerifyButtonState();
                         }
                     }
@@ -143,22 +163,20 @@ public class VerifySignatureActivity extends AppCompatActivity {
         btnSelectDocument.setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("*/*"); // puedes restringir a "application/pdf" más adelante
+            intent.setType("*/*"); // más adelante podrías poner application/pdf si quieres
             pickDocumentLauncher.launch(intent);
         });
 
         btnSelectSignature.setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("*/*"); // o "application/octet-stream"
+            intent.setType("*/*"); // o application/octet-stream
             pickSignatureLauncher.launch(intent);
         });
 
         btnVerify.setOnClickListener(v -> performVerification());
 
-        btnResetVerification.setOnClickListener(v -> {
-            resetVerificationState();
-        });
+        btnResetVerification.setOnClickListener(v -> resetVerificationState());
     }
 
     private void updateVerifyButtonState() {
@@ -167,24 +185,33 @@ public class VerifySignatureActivity extends AppCompatActivity {
                 && selectedSignatureUri != null);
         btnVerify.setEnabled(enabled);
 
-        // Cada vez que cambia algo relevante, actualizamos el texto de estado
+        // Actualizamos mensaje guía si aún no se ha verificado (o si estamos en selección)
         updateStatusText();
     }
 
     private void performVerification() {
+        // Medición E2E: desde click hasta resultado final en pantalla
+        final long t0 = SystemClock.elapsedRealtimeNanos();
+
         if (selectedCert == null || selectedDocumentUri == null || selectedSignatureUri == null) {
             tvSummary.setText("Faltan datos para realizar la verificación.");
+            logBenchVerify("unknown", false, msSince(t0));
             return;
         }
 
         tvSummary.setText("Verificando firma...");
         tvDetails.setText("");
 
+        boolean success = false;
+        String alg = "unknown";
+
         try {
+            // 1) Leemos documento y firma
             byte[] docBytes = readAllBytesFromUri(selectedDocumentUri);
             byte[] sigBytes = readAllBytesFromUri(selectedSignatureUri);
 
-            // 1) Verificación criptográfica
+            // 2) Verificación criptográfica
+            alg = safeAlgFromCert(selectedCert);
             boolean signatureOk = certManager.verifyDataWithCertificate(
                     selectedCert,
                     docBytes,
@@ -192,48 +219,64 @@ public class VerifySignatureActivity extends AppCompatActivity {
             );
 
             if (!signatureOk) {
-                tvSummary.setText("❌ La firma NO es válida para este documento y certificado.");
-                tvDetails.setText("Se ha realizado la verificación criptográfica y la firma NO coincide con el contenido del documento.");
+                tvSummary.setText("❌ La firma NO es válida.");
+                tvDetails.setText("La firma no coincide con el contenido del documento o el certificado proporcionado.");
                 btnResetVerification.setVisibility(View.VISIBLE);
+
+                logBenchVerify(alg, false, msSince(t0));
                 return;
             }
 
-            // 2) Validación básica del certificado (sin CA de momento)
+            // 3) Validaciones básicas del certificado (sin CA)
             PqcCertificateManager.CertValidationResult cv =
                     certManager.validateCertificate(selectedCert, null);
 
-            // Resumen amigable
+            // Construimos resumen final (sin CA)
             StringBuilder summary = new StringBuilder();
-            summary.append("✅ La firma es criptográficamente VÁLIDA.\n");
+            summary.append("✅ La firma es VÁLIDA.\n");
 
+            // Vigencia temporal
             if (!cv.timeValid) {
-                summary.append("⚠ El certificado NO está vigente (caducado o aún no válido).\n");
+                summary.append("❌ Certificado NO vigente (caducado o aún no válido).\n");
             } else {
-                summary.append("✔ El certificado está vigente en este momento.\n");
+                summary.append("✔ Certificado vigente.\n");
             }
 
+            // End-entity
             if (!cv.isEndEntity) {
-                summary.append("⚠ El certificado se identifica como CA, no como certificado de usuario.\n");
+                summary.append("❌ Certificado no apto: es un certificado de CA.\n");
             }
 
+            // KeyUsage estricto (si falta o es false, cv.keyUsageOk será false con tu cambio)
             if (!cv.keyUsageOk) {
-                summary.append("⚠ El uso de clave no es el típico para firma digital (KeyUsage.digitalSignature = false).\n");
+                summary.append("❌ Certificado no apto para firma electrónica.\n");
+                tvSummary.setText(summary.toString());
+
+                // Detalle técnico
+                tvDetails.setText("Detalles técnicos:\n\n" + cv.diagnostics);
+                btnResetVerification.setVisibility(View.VISIBLE);
+
+                logBenchVerify(alg, false, msSince(t0));
+                return;
             }
 
+            // Si pasa requisitos mínimos, ok final
             tvSummary.setText(summary.toString());
 
-            // Detalles técnicos
-            StringBuilder details = new StringBuilder();
-            details.append("Detalles técnicos de la validación del certificado:\n\n");
-            details.append(cv.diagnostics);
+            // Detalles técnicos (útiles para tribunal; si quieres, puedes acortarlo)
+            tvDetails.setText("Detalles técnicos:\n\n" + cv.diagnostics);
 
-            tvDetails.setText(details.toString());
             btnResetVerification.setVisibility(View.VISIBLE);
+            success = true;
+
+            logBenchVerify(alg, true, msSince(t0));
 
         } catch (IOException e) {
             tvSummary.setText("Error leyendo documento o firma: " + e.getMessage());
+            logBenchVerify(alg, false, msSince(t0));
         } catch (Exception e) {
             tvSummary.setText("Error durante la verificación: " + e.getMessage());
+            logBenchVerify(alg, false, msSince(t0));
         }
     }
 
@@ -258,15 +301,11 @@ public class VerifySignatureActivity extends AppCompatActivity {
                     result = cursor.getString(nameIndex);
                 }
             }
-        } catch (Exception e) {
-            // opcional: loggear si quieres
+        } catch (Exception ignored) {
         } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
+            if (cursor != null) cursor.close();
         }
 
-        // Fallbacks por si algo salió mal
         if (result == null || result.isEmpty()) {
             result = uri.getLastPathSegment();
         }
@@ -277,8 +316,7 @@ public class VerifySignatureActivity extends AppCompatActivity {
     }
 
     private void updateStatusText() {
-        // Si ya has mostrado un resultado de verificación, normalmente
-        // no llamaremos a esto hasta que el usuario pulse "Nueva verificación".
+        // Si no hay nada seleccionado
         if (selectedCert == null && selectedDocumentUri == null && selectedSignatureUri == null) {
             tvSummary.setText("Selecciona certificado, documento y fichero de firma para empezar.");
             return;
@@ -289,7 +327,6 @@ public class VerifySignatureActivity extends AppCompatActivity {
             return;
         }
 
-        // A partir de aquí, ya hay certificado seleccionado
         if (selectedDocumentUri == null && selectedSignatureUri == null) {
             tvSummary.setText("Certificado cargado. Ahora selecciona el documento y el fichero de firma.");
             return;
@@ -305,31 +342,51 @@ public class VerifySignatureActivity extends AppCompatActivity {
             return;
         }
 
-        // Si llegamos aquí, los 3 están seleccionados
         tvSummary.setText("Archivos cargados correctamente. Puede proceder a verificar la firma.");
     }
 
     private void resetVerificationState() {
-        // Limpiamos estado interno
         selectedCertUri = null;
         selectedDocumentUri = null;
         selectedSignatureUri = null;
         selectedCert = null;
 
-        // Limpiamos los textos de selección
         tvSelectedCert.setText("Ningún certificado seleccionado");
         tvSelectedDocument.setText("Ningún documento seleccionado");
         tvSelectedSignature.setText("Ningún fichero de firma seleccionado");
 
-        // Limpiamos resultados
         tvDetails.setText("");
-        // Reset del mensaje principal al estado inicial
         tvSummary.setText("Selecciona certificado, documento y fichero de firma para empezar.");
 
-        // Deshabilitar botón de verificar y actualizar estado
         updateVerifyButtonState();
 
-        // Ocultar botón de “Nueva verificación” hasta la próxima vez
         btnResetVerification.setVisibility(View.GONE);
+    }
+
+    // -------------------------------
+    // Helpers para mediciones de rendimiento
+    // -------------------------------
+    private static double msSince(long startNanos) {
+        return (SystemClock.elapsedRealtimeNanos() - startNanos) / 1_000_000.0;
+    }
+
+    private static String safeAlgFromCert(X509Certificate cert) {
+        try {
+            if (cert != null && cert.getPublicKey() != null) {
+                String a = cert.getPublicKey().getAlgorithm();
+                if (a != null && !a.isEmpty()) return a;
+            }
+        } catch (Exception ignored) {}
+        return "unknown";
+    }
+
+    /**
+     * Log para medición de tiempos
+     */
+    private void logBenchVerify(String alg, boolean ok, double ms) {
+        android.util.Log.i("BENCH", "VERIFY_MS=" +
+                String.format(java.util.Locale.US, "%.3f", ms) +
+                " alg=" + alg +
+                " ok=" + ok);
     }
 }

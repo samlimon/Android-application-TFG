@@ -1,0 +1,51 @@
+{
+  "buildFiles": [
+    "C:\\Users\\samue\\Documents\\curso2024_25\\TFG\\codigo\\MiniBaseApp\\liboqs-android\\jni\\Android.mk"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "C:\\Users\\samue\\AppData\\Local\\Android\\Sdk\\ndk\\27.0.12077973\\ndk-build.cmd",
+      "NDK_PROJECT_PATH\u003dnull",
+      "APP_BUILD_SCRIPT\u003dC:\\Users\\samue\\Documents\\curso2024_25\\TFG\\codigo\\MiniBaseApp\\liboqs-android\\jni\\Android.mk",
+      "APP_ABI\u003dx86_64",
+      "NDK_ALL_ABIS\u003dx86_64",
+      "NDK_DEBUG\u003d1",
+      "APP_PLATFORM\u003dandroid-21",
+      "NDK_OUT\u003dC:\\Users\\samue\\Documents\\curso2024_25\\TFG\\codigo\\MiniBaseApp\\liboqs-android\\build\\intermediates\\cxx\\Debug\\6k31d3vr/obj",
+      "NDK_LIBS_OUT\u003dC:\\Users\\samue\\Documents\\curso2024_25\\TFG\\codigo\\MiniBaseApp\\liboqs-android\\build\\intermediates\\cxx\\Debug\\6k31d3vr/lib",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "C:\\Users\\samue\\AppData\\Local\\Android\\Sdk\\ndk\\27.0.12077973\\ndk-build.cmd",
+    "NDK_PROJECT_PATH\u003dnull",
+    "APP_BUILD_SCRIPT\u003dC:\\Users\\samue\\Documents\\curso2024_25\\TFG\\codigo\\MiniBaseApp\\liboqs-android\\jni\\Android.mk",
+    "APP_ABI\u003dx86_64",
+    "NDK_ALL_ABIS\u003dx86_64",
+    "NDK_DEBUG\u003d1",
+    "APP_PLATFORM\u003dandroid-21",
+    "NDK_OUT\u003dC:\\Users\\samue\\Documents\\curso2024_25\\TFG\\codigo\\MiniBaseApp\\liboqs-android\\build\\intermediates\\cxx\\Debug\\6k31d3vr/obj",
+    "NDK_LIBS_OUT\u003dC:\\Users\\samue\\Documents\\curso2024_25\\TFG\\codigo\\MiniBaseApp\\liboqs-android\\build\\intermediates\\cxx\\Debug\\6k31d3vr/lib",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "oqs-jni-debug-x86_64": {
+      "artifactName": "oqs-jni",
+      "buildCommandComponents": [
+        "C:\\Users\\samue\\AppData\\Local\\Android\\Sdk\\ndk\\27.0.12077973\\ndk-build.cmd",
+        "NDK_PROJECT_PATH\u003dnull",
+        "APP_BUILD_SCRIPT\u003dC:\\Users\\samue\\Documents\\curso2024_25\\TFG\\codigo\\MiniBaseApp\\liboqs-android\\jni\\Android.mk",
+        "APP_ABI\u003dx86_64",
+        "NDK_ALL_ABIS\u003dx86_64",
+        "NDK_DEBUG\u003d1",
+        "APP_PLATFORM\u003dandroid-21",
+        "NDK_OUT\u003dC:\\Users\\samue\\Documents\\curso2024_25\\TFG\\codigo\\MiniBaseApp\\liboqs-android\\build\\intermediates\\cxx\\Debug\\6k31d3vr/obj",
+        "NDK_LIBS_OUT\u003dC:\\Users\\samue\\Documents\\curso2024_25\\TFG\\codigo\\MiniBaseApp\\liboqs-android\\build\\intermediates\\cxx\\Debug\\6k31d3vr/lib",
+        "C:\\Users\\samue\\Documents\\curso2024_25\\TFG\\codigo\\MiniBaseApp\\liboqs-android\\build\\intermediates\\cxx\\Debug\\6k31d3vr/obj/local/x86_64/liboqs-jni.so"
+      ],
+      "abi": "x86_64",
+      "output": "C:\\Users\\samue\\Documents\\curso2024_25\\TFG\\codigo\\MiniBaseApp\\liboqs-android\\build\\intermediates\\cxx\\Debug\\6k31d3vr\\obj\\local\\x86_64\\liboqs-jni.so",
+      "runtimeFiles": []
+    }
+  }
+}

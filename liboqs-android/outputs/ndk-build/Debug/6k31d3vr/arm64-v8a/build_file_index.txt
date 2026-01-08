@@ -1,0 +1,1 @@
+C:\Users\samue\Documents\curso2024_25\TFG\codigo\MiniBaseApp\liboqs-android\jni\Android.mk

@@ -221,6 +221,16 @@ public class PqcCertificateManager {
         PrivateKey privateKey = parsePrivateKeyFromPemBytes(keyBytes);
         X509Certificate caCert   = parseCertificateFromPemBytes(caCertBytes);
 
+        // Validación básica (modo estricto) antes de guardar en el almacén
+        CertValidationResult vr = validateCertificate(cert, caCert);
+
+        // Criterio mínimo: debe ser end-entity, vigente y con KeyUsage.digitalSignature
+        if (!vr.isOverallAcceptableForSigning()) {
+            Log.w(TAG, "Certificado rechazado en importación:\n" + vr.diagnostics);
+            throw new Exception("Certificado no apto para firma electrónica.\n" +
+                    "Motivo:\n" + vr.diagnostics);
+        }
+
         // Carga o creación del KeyStore PKCS#12
         KeyStore ks = loadOrCreateKeyStore(keystorePassword);
 
@@ -408,34 +418,14 @@ public class PqcCertificateManager {
         // 4) KeyUsage (digitalSignature)
         boolean[] keyUsage = userCert.getKeyUsage();
         if (keyUsage == null) {
-            // Sin restricción explícita
-            result.keyUsageOk = true;
-            diag.append("KeyUsage: no presente (se asume uso permitido para firma)\n");
+            // Modo estricto: si no está KeyUsage, NO aceptamos para firma
+            result.keyUsageOk = false;
+            diag.append("KeyUsage: NO presente (modo estricto) -> NO apto para firma\n");
         } else {
             boolean digitalSignature = keyUsage.length > 0 && keyUsage[0];
             result.keyUsageOk = digitalSignature;
             diag.append("KeyUsage.digitalSignature: ")
-                    .append(digitalSignature ? "true\n" : "false (no apropiado para firma)\n");
-        }
-
-        // 5) Comprobar firma con la CA, si nos dan una
-        if (caCert != null) {
-            result.caSignatureChecked = true;
-            try {
-                PublicKey caPublicKey = caCert.getPublicKey();
-                userCert.verify(caPublicKey, KEYSTORE_PROVIDER); // por ejemplo "BC"
-                result.caSignatureOk = true;
-                diag.append("Firma del certificado por la CA proporcionada: OK\n");
-            } catch (Exception e) {
-                result.caSignatureOk = false;
-                diag.append("Firma del certificado por la CA proporcionada: NO VÁLIDA o NO COMPROBABLE (")
-                        .append(e.getClass().getSimpleName()).append(": ")
-                        .append(e.getMessage()).append(")\n");
-            }
-        } else {
-            result.caSignatureChecked = false;
-            result.caSignatureOk = false;
-            diag.append("Firma por CA: no comprobada (no se ha proporcionado certificado de CA)\n");
+                    .append(digitalSignature ? "true (OK)\n" : "false -> NO apto para firma\n");
         }
 
         result.diagnostics = diag.toString();
