@@ -6,7 +6,19 @@ El formato sigue una adaptación de [Keep a Changelog](https://keepachangelog.co
 y el versionado es incremental y orientado al desarrollo del TFG.
 
 ---
-## [v0.2] – 2025-12-14
+## [v4] – 2026-01-08
+
+### Added
+- Implementación de la autenticación por biometría.
+
+### Fixed
+- Ajuste en la verificación y validación del parametro KeyUsage.digitalSignature para comprobar que los certificados sean aptos para firma.
+- Se ha eliminado de issuer y subject en el listado de certificados.
+- Se corrije el mensaje tras la verificación de una firma para dejarlo más claro.
+- Se corrije el resultado de la verificación para certificados con parámetros erróneos.
+
+---
+## [v3] – 2025-12-14
 
 ### Added
 - Implementación del **módulo de verificación de firmas digitales**.
@@ -14,11 +26,10 @@ y el versionado es incremental y orientado al desarrollo del TFG.
 - Validación de la integridad del documento firmado.
 - Comprobación de la correspondencia entre firma, documento y certificado utilizado.
 - Se comprueba que sea un certificado de usuario, que se pueda utilizar para firmar y que no haya caducado.
-- Se comprueba la CA si procede (al trabajar con PQC no hay CA's compatibles actualmente).
 
 ---
 
-## [v0.2] – 2025-12-08
+## [v2] – 2025-12-08
 
 ### Added
 - Integración del gestor de archivos de Android para el guardado de firmas generadas.
@@ -35,7 +46,7 @@ y el versionado es incremental y orientado al desarrollo del TFG.
 
 ---
 
-## [v0.1] – 2025-11-30
+## [v1] – 2025-11-30
 
 ### Added
 - Importación del proyecto desde repositorio base.
