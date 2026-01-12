@@ -96,12 +96,3 @@ The complete source code is publicly available for academic and research purpose
 
 ---
 
-## 📂 Repository
-
-The full source code of the project is available in this repository.  
-It includes the Android application, project configuration files and dependencies required to build and run the application.
-
----
-
-🌍 **Other languages:**  
-- 🇪🇸 [Español](README_ES.md)
