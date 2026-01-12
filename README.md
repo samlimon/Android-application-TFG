@@ -1,5 +1,5 @@
-🌍 **Documentación disponible en otros idiomas:**  
-- 🇬🇧 [English](README.md)
+[![Español](https://img.shields.io/badge/lang-Español-red)](README.md)
+[![English](https://img.shields.io/badge/lang-English-blue)](README_EN.md)
   
 # MiniBaseApp – Aplicación Android para gestión y firma digital de documentos  
 **Trabajo de Fin de Grado (TFG)**  
