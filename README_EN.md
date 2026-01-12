@@ -1,70 +1,107 @@
-MiniBaseApp – Android Application for Digital Certificate Management and Document Signing
+[![Español](https://img.shields.io/badge/lang-Español-red)](README.md)
+[![English](https://img.shields.io/badge/lang-English-blue)](README_EN.md)
 
-Bachelor’s Degree Final Project (TFG)
+# MiniBaseApp – Android Application for Post-Quantum Digital Certificate Management and Document Signing
+**Bachelor’s Degree Final Project (TFG)**  
 
-Author: Samuel Ignacio Limón Riesgo
+- **Author:** Samuel Ignacio Limón Riesgo  
+- **Supervisor:** Andrés Marín López  
+- **University:** ETSIT – Universidad Politécnica de Madrid (UPM)  
 
-Supervisor: Andrés Marín López
+---
 
-University: ETSIT – Universidad Politécnica de Madrid (UPM)
+## 📘 Project Overview
 
-📘 Project Overview
+MiniBaseApp is an Android application whose main goal is to manage **post-quantum digital certificates**, enabling document signing and signature verification through a secure and controlled workflow.
 
-MiniBaseApp is an Android application whose main goal is to manage post-quantum digital certificates, enabling document signing and signature verification following a secure workflow.
-This project investigates and implements digital signature mechanisms based on X.509 certificates and cryptographic keys generated using post-quantum algorithms such as ML-DSA-44, ML-DSA-65 and ML-DSA-87.
+This project investigates and implements digital signature mechanisms based on **X.509 certificates** and cryptographic keys generated using **post-quantum signature algorithms**, specifically **ML-DSA-44, ML-DSA-65 and ML-DSA-87**, as standardized by NIST.
 
-The project serves both as a functional tool and as an educational proof of concept.
+The application serves both as a **functional prototype** and as an **educational proof of concept**, exploring the feasibility of integrating post-quantum cryptography into mobile identity and trust services.
 
-🎯 Project Objectives
+---
 
-Implement a post-quantum certificate management system within Android.
+## 🎯 Project Objectives
 
-Enable digital signing of PDF or text documents.
+- Implement a post-quantum certificate management system on Android.
+- Enable digital signing of PDF or text documents using imported certificates.
+- Verify digital signatures and perform basic certificate validation.
+- Design an intuitive user interface oriented towards academic, demonstrative and experimental use.
 
-Validate signed documents and associated certificates.
+---
 
-Design an application with a simple user interface oriented towards academic and demonstrative use.
+## 🧩 Current Features
 
-🧩 Current Features
+- Generation and storage of cryptographic key pairs  
+  *(module inherited from a previous project on which this work is based)*.
+- Secure credential store management, including password-based protection.
+- Import of post-quantum digital certificates (X.509).
+- Listing and selection of available certificates.
+- Digital signing of documents using a previously imported certificate.
+- Signature verification, including:
+  - Cryptographic validation of the signature.
+  - Certificate validity period checks.
+  - Verification of certificate suitability for digital signature usage.
+- Authentication for sensitive operations using **password or biometric authentication**.
 
-Generation and storage of cryptographic key pairs
-(module inherited from a previous project on which this work is based).
+> ⚠️ **Note:**  
+> Certificate Authority (CA) chain validation, CRL checks and OCSP verification are **not implemented** in the current version, as the project operates in an experimental post-quantum context.
 
-Credential store management (password creation and access control).
+---
 
-Import of post-quantum digital certificates.
+## 🔧 Technologies Used
 
-Listing of available certificates.
+- **Android Studio Otter 2025.2.1**
+- **Java**
+- **Android Security APIs**
+- **Bouncy Castle Cryptographic Provider**
+- **Gradle 9.0**
 
-Digital signing of documents using a previously imported certificate.
+### Cryptographic formats and algorithms
 
-Signature verification, including cryptographic validation and certificate checks (validity period and signature usage).
-Certificate authority validation and CRL/OCSP checks are not implemented in the current version.
+- **X.509 certificates**
+- **Post-quantum digital signatures**, currently tested with:
+  - ML-DSA-44  
+  - ML-DSA-65  
+  - ML-DSA-87  
 
-Authentication for sensitive modules using password or biometric authentication.
+The application supports any post-quantum algorithm and certificate format that can be generated and handled by the **Bouncy Castle** provider.
 
-🔧 Technologies Used
+---
 
-Android Studio Otter 2025.2.1
+## 🔐 Security Considerations
 
-Java
+- Private keys are stored within a PKCS#12 keystore protected by a user-defined password.
+- When enabled, the keystore password is encrypted using a symmetric key stored in the **Android Keystore**, bound to biometric authentication.
+- Sensitive operations (certificate management and signing) require prior user authentication.
 
-Android Security APIs
+---
 
-Bouncy Castle KeyStore
+## 🚧 Limitations and Future Work
 
-Gradle 9.0
+This project represents an **experimental prototype**. Planned future improvements include:
 
-Supported formats and cryptography
+- Integration with standard signature formats such as **PAdES**.
+- Full certificate chain validation and trust anchor management.
+- CRL and OCSP-based revocation checking.
+- Hybrid post-quantum / classical signature support.
+- Alignment with the **European Digital Identity Wallet (EUDI Wallet)** ecosystem.
 
-X.509 certificates
+---
 
-Post-quantum certificates, currently tested with:
+## 📄 Academic Context
 
-ML-DSA-44
+This project has been developed as a **Bachelor’s Degree Final Project (TFG)** and builds upon a previous academic work focused on post-quantum signature experimentation without certificate management.
 
-ML-DSA-65
+The complete source code is publicly available for academic and research purposes.
 
-ML-DSA-87
+---
 
-The application supports any post-quantum certificate and algorithm that can be generated and handled by the Bouncy Castle cryptographic provider.
+## 📂 Repository
+
+The full source code of the project is available in this repository.  
+It includes the Android application, project configuration files and dependencies required to build and run the application.
+
+---
+
+🌍 **Other languages:**  
+- 🇪🇸 [Español](README_ES.md)
