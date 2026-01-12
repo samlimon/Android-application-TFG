@@ -1,3 +1,6 @@
+🌍 **Documentación disponible en otros idiomas:**  
+- 🇬🇧 [English](README.md)
+  
 # MiniBaseApp – Aplicación Android para gestión y firma digital de documentos  
 **Trabajo de Fin de Grado (TFG)**  
 - Autor: Samuel Ignacio Limón Riesgo 
