@@ -103,7 +103,6 @@ public class VerifySignatureActivity extends AppCompatActivity {
                                 tvSummary.setText("Error al leer el certificado: " + e.getMessage());
                             }
 
-                            // Si cambias selección, ocultamos botón de reset hasta que haya verificación real
                             btnResetVerification.setVisibility(View.GONE);
                             tvDetails.setText("");
 
@@ -206,11 +205,11 @@ public class VerifySignatureActivity extends AppCompatActivity {
         String alg = "unknown";
 
         try {
-            // 1) Leemos documento y firma
+            // Leemos documento y firma
             byte[] docBytes = readAllBytesFromUri(selectedDocumentUri);
             byte[] sigBytes = readAllBytesFromUri(selectedSignatureUri);
 
-            // 2) Verificación criptográfica
+            // Verificación criptográfica
             alg = safeAlgFromCert(selectedCert);
             boolean signatureOk = certManager.verifyDataWithCertificate(
                     selectedCert,
@@ -227,11 +226,11 @@ public class VerifySignatureActivity extends AppCompatActivity {
                 return;
             }
 
-            // 3) Validaciones básicas del certificado (sin CA)
+            // Validaciones básicas del certificado
             PqcCertificateManager.CertValidationResult cv =
                     certManager.validateCertificate(selectedCert, null);
 
-            // Construimos resumen final (sin CA)
+            // Construimos resumen final
             StringBuilder summary = new StringBuilder();
             summary.append("✅ La firma es VÁLIDA.\n");
 
@@ -247,7 +246,7 @@ public class VerifySignatureActivity extends AppCompatActivity {
                 summary.append("❌ Certificado no apto: es un certificado de CA.\n");
             }
 
-            // KeyUsage estricto (si falta o es false, cv.keyUsageOk será false con tu cambio)
+            // KeyUsage estricto
             if (!cv.keyUsageOk) {
                 summary.append("❌ Certificado no apto para firma electrónica.\n");
                 tvSummary.setText(summary.toString());
@@ -263,7 +262,7 @@ public class VerifySignatureActivity extends AppCompatActivity {
             // Si pasa requisitos mínimos, ok final
             tvSummary.setText(summary.toString());
 
-            // Detalles técnicos (útiles para tribunal; si quieres, puedes acortarlo)
+            // Detalles técnicos
             tvDetails.setText("Detalles técnicos:\n\n" + cv.diagnostics);
 
             btnResetVerification.setVisibility(View.VISIBLE);
@@ -363,9 +362,9 @@ public class VerifySignatureActivity extends AppCompatActivity {
         btnResetVerification.setVisibility(View.GONE);
     }
 
-    // -------------------------------
-    // Helpers para mediciones de rendimiento
-    // -------------------------------
+    /**
+    * Helpers para mediciones de rendimiento
+    */
     private static double msSince(long startNanos) {
         return (SystemClock.elapsedRealtimeNanos() - startNanos) / 1_000_000.0;
     }

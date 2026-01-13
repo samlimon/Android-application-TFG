@@ -87,7 +87,7 @@ public class SignWithCertActivity extends AppCompatActivity {
         setupCreateSignatureFileLauncher();
         setupSignButton();
 
-        // Antes pedías contraseña siempre: ahora intentamos huella si está configurada
+        // huella si está configurada
         openKeystoreAndLoadCertificates();
 
         btnChooseCert.setOnClickListener(v -> {
@@ -293,7 +293,7 @@ public class SignWithCertActivity extends AppCompatActivity {
         });
     }
 
-    // Guardar firma como...
+    // Guardar firma como
     private void setupCreateSignatureFileLauncher() {
         createSignatureFileLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),

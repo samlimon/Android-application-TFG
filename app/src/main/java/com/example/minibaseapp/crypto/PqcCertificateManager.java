@@ -57,9 +57,9 @@ public class PqcCertificateManager {
         }
     }
 
-    // -------------------------
-    // Clase auxiliar: clave + cert
-    // -------------------------
+    /**
+    * Clase auxiliar: clave + cert
+    */
     public static class KeyAndCert {
         public final PrivateKey privateKey;
         public final X509Certificate certificate;
@@ -85,14 +85,13 @@ public class PqcCertificateManager {
         public boolean isEndEntity;
         public boolean keyUsageOk;
 
-        // CA opcional
+        // CA
         public boolean caSignatureChecked;  // true si hemos intentado verificar
         public boolean caSignatureOk;       // true si la verificación con la CA ha ido bien
 
-        // Texto explicativo para logs / UI técnica
+        // Texto explicativo
         public String diagnostics;
 
-        // Helpers cómodos
         public boolean isOverallAcceptableForSigning() {
             // Aquí puedes decidir tu criterio mínimo
             return timeValid && isEndEntity && keyUsageOk;
@@ -158,27 +157,27 @@ public class PqcCertificateManager {
 
             JcaPEMKeyConverter converter = new JcaPEMKeyConverter().setProvider(KEYSTORE_PROVIDER);
 
-            // 1) Caso típico: PKCS#8 -> PrivateKeyInfo
+            // Caso típico: PKCS#8 -> PrivateKeyInfo
             if (obj instanceof org.bouncycastle.asn1.pkcs.PrivateKeyInfo) {
                 org.bouncycastle.asn1.pkcs.PrivateKeyInfo pkInfo =
                         (org.bouncycastle.asn1.pkcs.PrivateKeyInfo) obj;
                 return converter.getPrivateKey(pkInfo);
             }
 
-            // 2) Caso keypair (por si algún día usas "BEGIN PRIVATE KEY" de otro tipo o "BEGIN KEY PAIR")
+            // Caso keypair
             if (obj instanceof org.bouncycastle.openssl.PEMKeyPair) {
                 org.bouncycastle.openssl.PEMKeyPair keyPair =
                         (org.bouncycastle.openssl.PEMKeyPair) obj;
                 return converter.getKeyPair(keyPair).getPrivate();
             }
 
-            // 3) Caso clave privada *encriptada* (por si algún día usas password en el .key)
+            // Caso clave privada *encriptada*
             if (obj instanceof org.bouncycastle.openssl.PEMEncryptedKeyPair) {
                 throw new Exception("La clave privada está cifrada (PEMEncryptedKeyPair). " +
                         "El soporte de descifrado con contraseña no está implementado todavía.");
             }
 
-            // 4) Cualquier otro tipo -> info detallada para depurar
+            // Cualquier otro tipo
             throw new Exception("Tipo de objeto PEM no soportado: " + obj.getClass().getName());
         } catch (Exception e) {
             Log.e(TAG, "Error al parsear clave privada", e);
@@ -249,9 +248,7 @@ public class PqcCertificateManager {
         storeKeyStore(ks, keystorePassword);
     }
     /**
-     * Lista todos los certificados del keystore PKCS#12 interno.
-     * Por simplicidad usamos una contraseña fija "changeit" para abrir el keystore.
-     * Más adelante puedes cambiar esto para pedir la contraseña al usuario.
+     * Lista todos los certificados del keystore PKCS#12 interno
      */
     public List<ImportedCert> listCertificates(char[] keystorePassword) throws Exception {
         List<ImportedCert> result = new ArrayList<>();
@@ -285,9 +282,9 @@ public class PqcCertificateManager {
         }
     }
 
-    // -------------------------
-    // Obtener clave privada + cert por alias
-    // -------------------------
+    /**
+    * Obtener clave privada + cert por alias
+    */
     public KeyAndCert getKeyAndCertificate(String alias, char[] keystorePassword) throws Exception {
         KeyStore ks = loadOrCreateKeyStore(keystorePassword);
 
@@ -304,9 +301,9 @@ public class PqcCertificateManager {
         return new KeyAndCert((PrivateKey) key, (X509Certificate) cert);
     }
 
-    // -------------------------
-    // Firmar datos con un alias
-    // -------------------------
+    /**
+    * Firmar datos con un alias
+    */
     public byte[] signDataWithAlias(String alias, char[] keystorePassword, byte[] data) throws Exception {
         KeyAndCert kc = getKeyAndCertificate(alias, keystorePassword);
         PrivateKey privateKey = kc.privateKey;
@@ -322,9 +319,9 @@ public class PqcCertificateManager {
 
     /**
      * Carga un certificado X.509 desde un Uri (por ejemplo, un .pem que el usuario selecciona
-     * con el gestor de archivos del dispositivo).
+     * con el gestor de archivos del dispositivo)
      *
-     * Reutiliza el parseo PEM ya existente en parseCertificateFromPemBytes(...).
+     * Reutiliza el parseo PEM ya existente en parseCertificateFromPemBytes(...)
      */
     public X509Certificate loadCertificateFromUri(Context ctx, Uri certUri) throws Exception {
         // Leemos todos los bytes del fichero (PEM)
@@ -335,12 +332,7 @@ public class PqcCertificateManager {
 
     /**
      * Verifica criptográficamente una firma sobre unos datos usando la clave pública
-     * del certificado proporcionado.
-     *
-     * @param cert           Certificado del firmante (X.509)
-     * @param data           Datos originales (documento) en bytes
-     * @param signatureBytes Firma en bytes (por ejemplo, el .bin generado por la app)
-     * @return true si la firma es válida para esos datos y ese certificado, false en caso contrario
+     * del certificado proporcionado
      */
     public boolean verifyDataWithCertificate(
             X509Certificate cert,

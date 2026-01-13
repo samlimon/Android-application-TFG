@@ -30,7 +30,7 @@ public class CertificatesMenuActivity extends AppCompatActivity {
             startActivity(i);
         });
 
-        // Verificar firma (nueva Activity que implementaremos luego)
+        // Verificar firma
         btnVerifySignature.setOnClickListener(v -> {
             Intent i = new Intent(
                     CertificatesMenuActivity.this,
@@ -39,7 +39,7 @@ public class CertificatesMenuActivity extends AppCompatActivity {
             startActivity(i);
         });
 
-        // Gestionar certificados (tu CertificatesActivity actual)
+        // Gestionar certificados
         btnManageCerts.setOnClickListener(v -> {
             Intent i = new Intent(
                     CertificatesMenuActivity.this,

@@ -36,7 +36,7 @@ public class CertificatesActivity extends AppCompatActivity {
     // Biometría / acceso al keystore
     private KeystoreAuthManager ksAuth;
 
-    // Contraseña activa (en memoria) para operar en esta sesión
+    // Contraseña del Keystore
     private char[] keystorePassword;
     private char[] lastKeystorePassword;
 
@@ -68,7 +68,7 @@ public class CertificatesActivity extends AppCompatActivity {
             tvCertList.setText("Aviso: no se pudo inicializar biometría. Se usará contraseña.\n" + e.getMessage());
         }
 
-        // 1) Launcher para seleccionar user_cert.pem
+        // Launcher para seleccionar user_cert.pem
         pickUserCertLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
@@ -79,7 +79,7 @@ public class CertificatesActivity extends AppCompatActivity {
                     }
                 });
 
-        // 2) Launcher para seleccionar user_key
+        // Launcher para seleccionar user_key
         pickUserKeyLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
@@ -90,7 +90,7 @@ public class CertificatesActivity extends AppCompatActivity {
                     }
                 });
 
-        // 3) Launcher para seleccionar cacert.pem
+        // Launcher para seleccionar cacert.pem
         pickCaCertLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
@@ -107,10 +107,9 @@ public class CertificatesActivity extends AppCompatActivity {
         requestKeystoreAccessThenRefreshList();
     }
 
-    // -----------------------
-    // Acceso al keystore (huella/contraseña)
-    // -----------------------
-
+    /**
+    * Acceso al keystore (huella/contraseña)
+    */
     private void requestKeystoreAccessThenRefreshList() {
         if (ksAuth != null && ksAuth.hasStoredPassword()) {
             tvCertList.setText("Autentícate con huella para ver los certificados.");
@@ -217,10 +216,9 @@ public class CertificatesActivity extends AppCompatActivity {
                 .show();
     }
 
-    // -----------------------
-    // Importación de certificado (tu flujo original)
-    // -----------------------
-
+    /**
+    * Importación de certificado (tu flujo original)
+    */
     private void showAddCredentialDialog() {
         // Si aún no tenemos contraseña (ni por huella ni manual), pedimos acceso primero
         if (keystorePassword == null) {
